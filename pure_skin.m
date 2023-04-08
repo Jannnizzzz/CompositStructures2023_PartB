@@ -1,0 +1,73 @@
+clear all
+close all
+clc
+
+%% Properties
+
+% properties in MPa
+E1 = 62046;
+E2 = 62046;
+G12 = 4826;
+
+Xt= 1517;
+Xc= 1379;
+Yt= 1450;
+Yc= 1379;
+S = 99;
+
+nu12 = .05;
+t = .195; % in mm
+
+% dimensions of the panel in mm
+a = 1000; 
+b = 480;
+AR = a/b;
+
+%% Layup
+
+theta_skin = [0, 45, 45, 0];
+
+Q_skin = zeros(3,3,length(theta_skin));
+for i = 1:length(theta_skin)
+    Q_skin(:,:,i) = Q_th(E1, E2, nu12, G12, theta_skin(i));
+end
+
+D = D_Qt(Q_skin,t);
+A = A_Qt(Q_skin,t);
+
+%% Buckling calculation
+% minimizing buckling load over amount of half waves
+N0 = @(m) pi^2*(D(1,1)*m.^4 + 2*(D(1,2)+2*D(3,3)) * m.^2 * AR^2 + D(2,2) * AR^4) / (a^2 * m.^2);
+
+m = 1:3;
+N0_m = N0(m);
+
+Nx_buckling = N0(m(N0_m == min(N0_m))) * b;
+
+if Nx_buckling < 7e3
+    disp("Buckling occurs!")
+end
+
+%% Max. stress failure analysis
+eps_global = A\[7e3/b;0;0];
+
+for i = 1:length(theta_skin)
+    stress_global = Q_skin(:,:,i) * eps_global;
+    stress_local = rotate_stress(stress_global, theta_skin(i));
+    
+    if stress_local(1) > Xt
+        fprintf("FFTx in ply %d\n", i)
+    end
+    if stress_local(1) < -Xc
+        fprintf("FFCx in ply %d\n", i)
+    end
+    if stress_local(2) > Yt
+        fprintf("FFTy in ply %d\n", i)
+    end
+    if stress_local(2) < -Yc
+        fprintf("FFCy in ply %d\n", i)
+    end
+    if abs(stress_local(3)) > S
+        fprintf("Shear failure in ply %d\n", i)
+    end
+end
