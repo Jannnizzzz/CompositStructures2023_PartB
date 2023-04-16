@@ -8,6 +8,6 @@ function D = D_Qt(Q, t)
         zk = -h/2 + i*t;
         zk_1 = -h/2 + (i-1)*t;
 
-        D = D + Q(:,:,i) * (zk^3 - zk_1^3);
+        D = D + Q(:,:,i)/3 * (zk^3 - zk_1^3);
     end
 end
